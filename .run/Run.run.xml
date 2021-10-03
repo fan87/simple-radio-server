@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="me.fan87.fanaaudio.FANARadio" />
+    <module name="FANARadio" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/run" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="me.fan87.fanaaudio.station.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
