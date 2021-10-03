@@ -26,8 +26,8 @@ public class AudioStation {
     @Expose
     public String owner = "";
 
-    public List<File> tracks = new ArrayList<>();
-    public Map<OutputStream, InetSocketAddress> receivers = new HashMap<>();
+    public transient List<File> tracks = new ArrayList<>();
+    public transient Map<OutputStream, InetSocketAddress> receivers = new HashMap<>();
 
     AudioStation() {
 
@@ -68,9 +68,7 @@ public class AudioStation {
             private int extractNumber(String name) {
                 int i = 0;
                 try {
-                    int s = name.indexOf('_')+1;
-                    int e = name.lastIndexOf('.');
-                    String number = name.substring(s, e);
+                    String number = name.split("_")[0];
                     i = Integer.parseInt(number);
                 } catch(Exception e) {
                     i = 0;
