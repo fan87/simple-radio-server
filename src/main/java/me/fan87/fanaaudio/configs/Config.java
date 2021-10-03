@@ -18,6 +18,9 @@ public class Config {
     public Integer publicPort = 8080;
 
     @Expose
+    public String stationName = "Example Radio Station";
+
+    @Expose
     public List<AudioStation> stations = new ArrayList<>(Collections.singletonList(new AudioStation("example", "Example Station", "fan87")));
 
 }
