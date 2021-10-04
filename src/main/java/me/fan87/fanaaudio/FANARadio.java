@@ -48,8 +48,6 @@ public class FANARadio {
         logger.info("Initializing Stations Manager...");
         stationsManager = new StationsManager(this);
         logger.info("Starting HTTP Server..");
-
-
         server.start();
 
     }

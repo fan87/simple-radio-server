@@ -36,7 +36,7 @@ public class StationsManager {
             }
             String text = builder.toString();
             exchange.getResponseHeaders().add("Content-Type", "text/html");
-            exchange.sendResponseHeaders(404, text.length());
+            exchange.sendResponseHeaders(200, text.length());
             exchange.getResponseBody().write(text.getBytes(StandardCharsets.UTF_8));
             exchange.getResponseBody().flush();
             exchange.getResponseBody().close();
