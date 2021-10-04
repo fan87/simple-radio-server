@@ -29,6 +29,7 @@ public class AudioStation {
 
     private transient long lastSentTime = System.currentTimeMillis();
     private transient Thread streamingThread = null;
+    private transient Process process = null;
 
     public transient List<File> tracks = new ArrayList<>();
     public transient Map<OutputStream, InetSocketAddress> receivers = new HashMap<>();
@@ -95,8 +96,8 @@ public class AudioStation {
                     streamingThread = new Thread(() -> {
                         try {
                             radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
-                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-y", "-f", "mp3", "-sample_rate", "44100", "-map", "0:a", "-b:a", "256k", "pipe:");
-                            Process process = builder.start();
+                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-y", "-f", "mp3", "", "-sample_rate", "44100", "-map", "0:a", "-b:a", "256k", "pipe:");
+                            process = builder.start();
                             InputStream inputStream = process.getInputStream();
                             while (process.isAlive()) {
                                 int read = inputStream.read();
@@ -131,9 +132,16 @@ public class AudioStation {
 
                         }
                         radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
-
+                        Scanner scanner = new Scanner(process.getErrorStream());
+                        while (scanner.hasNextLine()) {
+                            System.out.println(scanner.nextLine());
+                        }
                     } catch (Exception e) {
                         radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
+                        Scanner scanner = new Scanner(process.getErrorStream());
+                        while (scanner.hasNextLine()) {
+                            System.out.println(scanner.nextLine());
+                        }
                     }
                 }
             }
