@@ -98,7 +98,7 @@ public class AudioStation {
                             ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", track.getAbsolutePath(), "-y", "-f", "mp3", "pipe:");
                             Process process = builder.start();
                             InputStream inputStream = process.getInputStream();
-                            while (true) {
+                            while (process.isAlive()) {
                                 int read = inputStream.read();
                                 if (read == -1) break;
                                 lastSentTime = System.currentTimeMillis();
@@ -111,6 +111,10 @@ public class AudioStation {
                                         receivers.remove(outputStream);
                                     }
                                 }
+                            }
+                            Scanner scanner = new Scanner(process.getErrorStream());
+                            while (scanner.hasNextLine()) {
+                                System.out.println(scanner.nextLine());
                             }
                         } catch (IOException e) {
                             e.printStackTrace();
