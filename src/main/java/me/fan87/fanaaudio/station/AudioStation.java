@@ -116,23 +116,29 @@ public class AudioStation {
                         }
                     }, "Streaming Thread");
                     try {
-                        streamingThread.join();
-                    } catch (InterruptedException e) {
+                        streamingThread.start();
+                        while (!streamingThread.isInterrupted() && streamingThread.isAlive()) {
+
+                        }
+                        radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
+
+                    } catch (Exception e) {
                         radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
                     }
                 }
             }
-        });
+        }).start();
 
         new Thread(() -> {
             while (true) {
                 long timeout = System.currentTimeMillis() - lastSentTime;
                 if ((timeout) > 5000) {
+                    lastSentTime = System.currentTimeMillis();
                     radio.getLogger().error(String.format("[%s]  Send Timeout (%s > 5000) Stopping Thread (Skip Song)...", namespace, Long.toString(timeout)));
                     streamingThread.stop();
                 }
             }
-        }, "Watchdog Thread");
+        }, "Watchdog Thread").start();
 
     }
 
