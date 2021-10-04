@@ -101,11 +101,8 @@ public class AudioStation {
                             InputStream inputStream = process.getInputStream();
                             while (process.isAlive()) {
                                 int read = inputStream.read();
-                                if (namespace.startsWith("anson")) {
-                                    System.out.println(read);
-                                }
+                                this.lastSentTime = System.currentTimeMillis();
                                 if (read == -1) break;
-                                lastSentTime = System.currentTimeMillis();
                                 for (OutputStream outputStream : new HashMap<>(receivers).keySet()) {
                                     try {
                                         outputStream.write(read);
@@ -128,7 +125,7 @@ public class AudioStation {
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                    }, "Streaming Thread");
+                    }, "Streaming Thread " + this.namespace);
                     try {
                         streamingThread.start();
                         while (!streamingThread.isInterrupted() && streamingThread.isAlive()) {
@@ -152,7 +149,7 @@ public class AudioStation {
                     streamingThread.stop();
                 }
             }
-        }, "Watchdog Thread").start();
+        }, "Watchdog Thread " + this.namespace).start();
 
     }
 
