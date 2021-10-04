@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class AudioStation {
 
@@ -25,6 +26,9 @@ public class AudioStation {
 
     @Expose
     public String owner = "";
+
+    private transient long lastSentTime = System.currentTimeMillis();
+    private transient Thread streamingThread = null;
 
     public transient List<File> tracks = new ArrayList<>();
     public transient Map<OutputStream, InetSocketAddress> receivers = new HashMap<>();
@@ -88,29 +92,48 @@ public class AudioStation {
         new Thread(() -> {
             while (true) {
                 for (File track : tracks) {
-                    try {
-                        radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
-                        ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", track.getAbsolutePath(), "-y", "-f", "mp3", "pipe:");
-                        Process process = builder.start();
-                        InputStream inputStream = process.getInputStream();
-                        while (true) {
-                            int read = inputStream.read();
-                            if (read == -1) break;
-                            for (OutputStream outputStream : new HashMap<>(receivers).keySet()) {
-                                try {
-                                    outputStream.write(read);
-                                } catch (IOException e) {
-                                    radio.getLogger().info(String.format("[%s]  Client %s has disconnected! ", namespace, receivers.get(outputStream).getHostName() + ":" + receivers.get(outputStream).getPort()));
-                                    receivers.remove(outputStream);
+                    streamingThread = new Thread(() -> {
+                        try {
+                            radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
+                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", track.getAbsolutePath(), "-y", "-f", "mp3", "pipe:");
+                            Process process = builder.start();
+                            InputStream inputStream = process.getInputStream();
+                            while (true) {
+                                int read = inputStream.read();
+                                if (read == -1) break;
+                                lastSentTime = System.currentTimeMillis();
+                                for (OutputStream outputStream : new HashMap<>(receivers).keySet()) {
+                                    try {
+                                        outputStream.write(read);
+                                    } catch (IOException e) {
+                                        radio.getLogger().info(String.format("[%s]  Client %s has disconnected! ", namespace, receivers.get(outputStream).getHostName() + ":" + receivers.get(outputStream).getPort()));
+                                        receivers.remove(outputStream);
+                                    }
                                 }
                             }
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    }, "Streaming Thread");
+                    try {
+                        streamingThread.join();
+                    } catch (InterruptedException e) {
+                        radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
                     }
                 }
             }
-        }).start();
+        });
+
+        new Thread(() -> {
+            while (true) {
+                long timeout = System.currentTimeMillis() - lastSentTime;
+                if ((timeout) > 5000) {
+                    radio.getLogger().error(String.format("[%s]  Send Timeout (%s > 5000) Stopping Thread (Skip Song)...", namespace, Long.toString(timeout)));
+                    streamingThread.stop();
+                }
+            }
+        }, "Watchdog Thread");
+
     }
 
     /**
