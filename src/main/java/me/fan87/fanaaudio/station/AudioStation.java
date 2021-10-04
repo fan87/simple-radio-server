@@ -96,7 +96,7 @@ public class AudioStation {
                     streamingThread = new Thread(() -> {
                         try {
                             radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
-                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "ok", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-y", "-f", "mp3", "-sample_rate", "44100", "-map", "0:a", "-b:a", "256k", "pipe:");
+                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-y", "-f", "mp3", "-sample_rate", "44100", "-map", "0:a", "-b:a", "256k", "pipe:");
                             process = builder.start();
                             InputStream inputStream = process.getInputStream();
                             while (process.isAlive()) {
