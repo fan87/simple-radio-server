@@ -17,4 +17,4 @@ WTFPL，你他媽的想幹麻就幹麻公開許可證<br>
 001_audio.mp3
 002_audio.mp3
 ```
-依照這個格式(  %index%_%random%.%ext%  )會依照index排好，否則依照作業系統給的回應排列
+依照這個格式(  %index%_%random%.%ext%  )會依照index排好，否則依照作業系統給的回應排列 (Shuffle 打開時無效)

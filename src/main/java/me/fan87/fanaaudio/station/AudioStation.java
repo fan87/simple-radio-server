@@ -92,6 +92,9 @@ public class AudioStation {
         }
         new Thread(() -> {
             while (true) {
+                if (radio.getConfigsManager().getConfig().shuffle) {
+                    Collections.shuffle(tracks);
+                }
                 for (File track : tracks) {
                     streamingThread = new Thread(() -> {
                         try {

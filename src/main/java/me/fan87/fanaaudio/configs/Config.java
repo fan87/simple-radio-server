@@ -23,4 +23,7 @@ public class Config {
     @Expose
     public List<AudioStation> stations = new ArrayList<>(Collections.singletonList(new AudioStation("example", "Example Station", "fan87")));
 
+    @Expose
+    public Boolean shuffle = true;
+
 }
