@@ -72,6 +72,14 @@ public class FANARadio {
     }
 
     /**
+     * Get the stations manager
+     * @return The stations manager
+     */
+    public StationsManager getStationsManager() {
+        return stationsManager;
+    }
+
+    /**
      * Get the logger
      * @return The logger
      */
