@@ -101,6 +101,9 @@ public class AudioStation {
                             InputStream inputStream = process.getInputStream();
                             while (process.isAlive()) {
                                 int read = inputStream.read();
+                                if (namespace.startsWith("anson")) {
+                                    System.out.println(read);
+                                }
                                 if (read == -1) break;
                                 lastSentTime = System.currentTimeMillis();
                                 for (OutputStream outputStream : new HashMap<>(receivers).keySet()) {
@@ -143,9 +146,9 @@ public class AudioStation {
         new Thread(() -> {
             while (true) {
                 long timeout = System.currentTimeMillis() - lastSentTime;
-                if ((timeout) > 5000) {
+                if ((timeout) > 10000) {
                     lastSentTime = System.currentTimeMillis();
-                    radio.getLogger().error(String.format("[%s]  Send Timeout (%s > 5000) Stopping Thread (Skip Song)...", namespace, Long.toString(timeout)));
+                    radio.getLogger().error(String.format("[%s]  Send Timeout (%sms > 10000ms) Stopping Thread (Skip Song)...", namespace, Long.toString(timeout)));
                     streamingThread.stop();
                 }
             }
