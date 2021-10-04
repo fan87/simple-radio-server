@@ -105,7 +105,12 @@ public class AudioStation {
                                 for (OutputStream outputStream : new HashMap<>(receivers).keySet()) {
                                     try {
                                         outputStream.write(read);
-                                        outputStream.flush();
+                                        try {
+                                            outputStream.flush();
+                                        } catch (Exception e) {
+                                            radio.getLogger().info(String.format("[%s]  Client %s has disconnected! ", namespace, receivers.get(outputStream).getHostName() + ":" + receivers.get(outputStream).getPort()));
+                                            receivers.remove(outputStream);
+                                        }
                                     } catch (Error e) {
                                         radio.getLogger().info(String.format("[%s]  Client %s has disconnected! ", namespace, receivers.get(outputStream).getHostName() + ":" + receivers.get(outputStream).getPort()));
                                         receivers.remove(outputStream);
