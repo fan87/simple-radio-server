@@ -4,16 +4,16 @@ import com.google.gson.annotations.Expose;
 import me.fan87.fanaaudio.FANARadio;
 import okhttp3.MediaType;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Logger;
 
 public class AudioStation {
@@ -95,8 +95,7 @@ public class AudioStation {
                     streamingThread = new Thread(() -> {
                         try {
                             radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
-                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-y", "-f", "mp3", "-sample_rate", "44100", "-b:a", "256k", "pipe:");
-                            System.out.println("ffmpeg -re -i \"" + track.getAbsolutePath() + "\" -y -f mp3 -sample_rate 44100 pipe:");
+                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-y", "-f", "mp3", "-sample_rate", "44100", "-map", "0:a", "-b:a", "256k", "pipe:");
                             Process process = builder.start();
                             InputStream inputStream = process.getInputStream();
                             while (process.isAlive()) {
@@ -118,9 +117,9 @@ public class AudioStation {
                                     }
                                 }
                             }
-                            Scanner scanner = new Scanner(process.getErrorStream());
-                            while (scanner.hasNextLine()) {
-                                System.out.println(scanner.nextLine());
+                            Scanner errorScanner = new Scanner(process.getErrorStream());
+                            while (errorScanner.hasNextLine()) {
+                                // System.out.println(errorScanner.nextLine());
                             }
                         } catch (IOException e) {
                             e.printStackTrace();
