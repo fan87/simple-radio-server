@@ -184,13 +184,23 @@ public class AudioStation {
                 return;
             }
             StringBuilder builder = new StringBuilder();
-            builder.append(String.format("<h1>%s</h1>\n", radio.getConfigsManager().getConfig().stationName) +
+            builder.append(String.format("" +
+                    "<!DOCTYPE html>\n" +
+                    "<html>\n" +
+                    "<head>\n" +
+                    "<meta charset=\"UTF-8\">\n" +
+                    String.format("<title>%s</title>\n", radio.getConfigsManager().getConfig().stationName) +
+                    "</head>\n" +
+                    "<body>\n" +
+                    "<h1>%s</h1>\n", radio.getConfigsManager().getConfig().stationName) +
                     "<h2>Station not found! Here's all available stations:</h2>\n" +
-                    "<p>Note: M3U requires 3rd party software. If you want to play it in your browser, use MP3</p>");
+                    "<p>Note: M3U requires 3rd party software. If you want to play it in your browser, use MP3</p>\n");
             for (AudioStation station : radio.getStationsManager().stations) {
                 builder.append(String.format("\n<li><a href=\"%s\">%s</a>  (<a href=\"%s\">M3U</a> | <a href=\"%s\">MP3</a>) </li>",
                         "/" + station.namespace + "/radio.mp3", station.name, "/" + station.namespace + "/radio.m3u", "/" + station.namespace + "/radio.mp3"));
             }
+            builder.append("</body>\n");
+            builder.append("</html>\n");
             String text = builder.toString();
             exchange.getResponseHeaders().add("Content-Type", "text/html");
             exchange.sendResponseHeaders(200, text.getBytes(StandardCharsets.UTF_8).length);
