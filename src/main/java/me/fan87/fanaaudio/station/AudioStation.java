@@ -135,7 +135,7 @@ public class AudioStation {
 
                             while (!shouldBreak) {
                                 long startTime = System.currentTimeMillis();
-                                for (int i = 0; i < 44100 / 1152; i++) { // Currently, 39 frames per second
+                                for (int i = 0; i < 1152; i++) { // Currently, 39 frames per second
                                     byteIndex++;
                                     System.out.println(byteIndex);
                                     int read = 0;
@@ -164,8 +164,7 @@ public class AudioStation {
                                     }
                                 }
                                 try {
-                                    System.out.println((System.currentTimeMillis() - startTime));
-                                    Thread.sleep(1000); // Send data second by second
+                                    Thread.sleep(1000 - (System.currentTimeMillis() - startTime)); // Send data second by second
                                     // By doing start time, sending thousands of bytes will take some time to process
                                     // So it will be exact 1000 ms
                                     // Note: If your computer is too slow it will break entirely
