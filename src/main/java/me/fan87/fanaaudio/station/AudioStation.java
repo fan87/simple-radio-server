@@ -144,11 +144,8 @@ public class AudioStation {
 
                     try {                     // Start song sending (Stream Thread) thread
                         streamingThread.start();
-                        while (!streamingThread.isInterrupted() && streamingThread.isAlive()) {
-
-                        }
+                        while (!streamingThread.isInterrupted() && streamingThread.isAlive())
                         radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
-                        Scanner scanner = new Scanner(process.getErrorStream());
                         if (radio.getConfigsManager().getConfig().debug) {
                             Scanner errorScanner = new Scanner(process.getErrorStream());
                             while (errorScanner.hasNextLine()) {
@@ -157,7 +154,6 @@ public class AudioStation {
                         }
                     } catch (Exception e) {
                         radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
-                        Scanner scanner = new Scanner(process.getErrorStream());
                         if (radio.getConfigsManager().getConfig().debug) {
                             e.printStackTrace();
                             Scanner errorScanner = new Scanner(process.getErrorStream());
