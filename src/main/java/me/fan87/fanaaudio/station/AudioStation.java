@@ -102,13 +102,7 @@ public class AudioStation {
         for (File file : files) {
             radio.getLogger().info(String.format("[%s]  Added %s to Track List", namespace, file.getName()));
             tracks.add(file);
-            promises += 1;
-            new Thread(() -> {
-                splitAudio(radio, file, true);
-            }).start();
-        }
-        while (promises != 0) {
-
+            splitAudio(radio, file, false);
         }
         disableWatchdog = false;
         return true;
