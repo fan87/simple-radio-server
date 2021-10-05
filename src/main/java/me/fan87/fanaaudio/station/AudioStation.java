@@ -123,14 +123,13 @@ public class AudioStation {
                     streamingThread = new Thread(() -> { // Streaming Thread. This will send a song.
                         try {
                             radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
-                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-y", "-f", "mp3", "-acodec", "libmp3lame", "-sample_rate", "44100", "-map", "0:a", "-map_metadata", "-1", "-write_xing", "0", "-id3v2_version", "0", "-b:a", "256000", "pipe:")
-                                    .redirectErrorStream(false); // Convert Format to streamable MP3 (Using FFmpeg)
+                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-y", "-f", "mp3", "-acodec", "libmp3lame", "-sample_rate", "44100", "-map", "0:a", "-map_metadata", "-1", "-write_xing", "0", "-id3v2_version", "0", "-b:a", "256000", "pipe:"); // Convert Format to streamable MP3 (Using FFmpeg)
                             process = builder.start();
                             InputStream inputStream = process.getInputStream();
-                            int read = 0;
+                            int read;
                             while ((read = inputStream.read()) != -1) {
                                 this.lastSentTime = System.currentTimeMillis(); // For watchdog thread (Skip the song if it's stuck)
-                                sendData(radio, (byte) read); // Send data back if it's not header
+                                sendData(radio, (byte) read); // Send data
                             }
                             if (radio.getConfigsManager().getConfig().debug) {
                                 Scanner errorScanner = new Scanner(process.getErrorStream());
