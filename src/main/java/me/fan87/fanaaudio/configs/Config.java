@@ -29,4 +29,10 @@ public class Config {
     @Expose
     public Boolean debug = false;
 
+    @Expose
+    public String radioIndexSubtitle = "Station not found! Here's all available stations:";
+
+    @Expose
+    public String radioIndexHint = "Note: M3U requires 3rd party software. If you want to play it in your browser, use AAC";
+
 }
