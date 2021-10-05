@@ -177,81 +177,84 @@ public class AudioStation {
      * @param radio Instance of FANARadio
      */
     public void startServicing(FANARadio radio) {
-        if (!indexTracks(radio)) {
-            return;
-        }
-        new Thread(() -> { // Radio Handling Thread.  Note: There will only be one Radio Handling Tread
-            while (true) {
-                if (radio.getConfigsManager().getConfig().shuffle) {
-                    Collections.shuffle(tracks);
-                }
-                for (File track : tracks) {
-                    streamingThread = new Thread(() -> { // Streaming Thread. This will send a song.
-                        try {
-                            disableWatchdog = true;
-                            for (File file : splitAudio(radio, track)) {
-                                disableWatchdog = false;
-                                radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
-                                ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", file.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-y", "-f", "adts", "-acodec", "aac", "-sample_rate", "44100", "-map", "0:a", "-map_metadata", "-1", "-write_xing", "0", "-id3v2_version", "0", "-b:a", "256000", "pipe:"); // Convert Format to streamable.aac (Using FFmpeg)
-                                process = builder.start();
-                                InputStream inputStream = process.getInputStream();
-                                int read;
-                                while ((read = inputStream.read()) != -1) {
-                                    this.lastSentTime = System.currentTimeMillis(); // For watchdog thread (Skip the song if it's stuck)
-                                    sendData(radio, (byte) read); // Send data
+        new Thread(() -> {
+            if (!indexTracks(radio)) {
+                return;
+            }
+            new Thread(() -> { // Radio Handling Thread.  Note: There will only be one Radio Handling Tread
+                while (true) {
+                    if (radio.getConfigsManager().getConfig().shuffle) {
+                        Collections.shuffle(tracks);
+                    }
+                    for (File track : tracks) {
+                        streamingThread = new Thread(() -> { // Streaming Thread. This will send a song.
+                            try {
+                                disableWatchdog = true;
+                                for (File file : splitAudio(radio, track)) {
+                                    disableWatchdog = false;
+                                    radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
+                                    ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", file.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-y", "-f", "adts", "-acodec", "aac", "-sample_rate", "44100", "-map", "0:a", "-map_metadata", "-1", "-write_xing", "0", "-id3v2_version", "0", "-b:a", "256000", "pipe:"); // Convert Format to streamable.aac (Using FFmpeg)
+                                    process = builder.start();
+                                    InputStream inputStream = process.getInputStream();
+                                    int read;
+                                    while ((read = inputStream.read()) != -1) {
+                                        this.lastSentTime = System.currentTimeMillis(); // For watchdog thread (Skip the song if it's stuck)
+                                        sendData(radio, (byte) read); // Send data
+                                    }
+                                    if (radio.getConfigsManager().getConfig().debug) {
+                                        Scanner errorScanner = new Scanner(process.getErrorStream());
+                                        while (errorScanner.hasNextLine()) {
+                                            System.out.println(errorScanner.nextLine()); // Send ffmpeg output to console for debugging purpose
+                                        }
+                                    }
                                 }
-                                if (radio.getConfigsManager().getConfig().debug) {
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }, "Streaming Thread " + this.namespace);
+
+                        try {                     // Start song sending (Stream Thread) thread
+                            streamingThread.start();
+                            while (!streamingThread.isInterrupted() && streamingThread.isAlive()) {}
+                            radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
+                            if (radio.getConfigsManager().getConfig().debug && process != null) {
+                                Scanner errorScanner = new Scanner(process.getErrorStream());
+                                while (errorScanner.hasNextLine()) {
+                                    System.out.println(errorScanner.nextLine()); // Send ffmpeg output to console for debugging purpose
+                                }
+                            }
+                        } catch (Exception e) {
+                            radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
+                            if (radio.getConfigsManager().getConfig().debug) {
+                                e.printStackTrace();
+                                if (process != null) {
                                     Scanner errorScanner = new Scanner(process.getErrorStream());
                                     while (errorScanner.hasNextLine()) {
                                         System.out.println(errorScanner.nextLine()); // Send ffmpeg output to console for debugging purpose
                                     }
                                 }
                             }
-
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }, "Streaming Thread " + this.namespace);
-
-                    try {                     // Start song sending (Stream Thread) thread
-                        streamingThread.start();
-                        while (!streamingThread.isInterrupted() && streamingThread.isAlive()) {}
-                        radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
-                        if (radio.getConfigsManager().getConfig().debug && process != null) {
-                            Scanner errorScanner = new Scanner(process.getErrorStream());
-                            while (errorScanner.hasNextLine()) {
-                                System.out.println(errorScanner.nextLine()); // Send ffmpeg output to console for debugging purpose
-                            }
-                        }
-                    } catch (Exception e) {
-                        radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
-                        if (radio.getConfigsManager().getConfig().debug) {
-                            e.printStackTrace();
-                            if (process != null) {
-                                Scanner errorScanner = new Scanner(process.getErrorStream());
-                                while (errorScanner.hasNextLine()) {
-                                    System.out.println(errorScanner.nextLine()); // Send ffmpeg output to console for debugging purpose
-                                }
-                            }
                         }
                     }
                 }
-            }
-        }).start();
+            }).start();
 
-        new Thread(() -> {
-            while (true) {
-                if (disableWatchdog) {
-                    lastSentTime = System.currentTimeMillis();
+            new Thread(() -> {
+                while (true) {
+                    if (disableWatchdog) {
+                        lastSentTime = System.currentTimeMillis();
+                    }
+                    long timeout = System.currentTimeMillis() - lastSentTime;
+                    if ((timeout) > 10000) {
+                        lastSentTime = System.currentTimeMillis();
+                        radio.getLogger().error(String.format("[%s]  Send Timeout (%sms > 10000ms) Stopping Thread (Skip Song)...", namespace, Long.toString(timeout)));
+                        streamingThread.stop();
+                    }
                 }
-                long timeout = System.currentTimeMillis() - lastSentTime;
-                if ((timeout) > 10000) {
-                    lastSentTime = System.currentTimeMillis();
-                    radio.getLogger().error(String.format("[%s]  Send Timeout (%sms > 10000ms) Stopping Thread (Skip Song)...", namespace, Long.toString(timeout)));
-                    streamingThread.stop();
-                }
-            }
-        }, "Watchdog Thread " + this.namespace).start();
+            }, "Watchdog Thread " + this.namespace).start();
+        }, this.namespace + " Main");
+
 
     }
 
