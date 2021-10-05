@@ -208,6 +208,7 @@ public class AudioStation {
                                         this.lastSentTime = System.currentTimeMillis(); // For watchdog thread (Skip the song if it's stuck)
                                         sendData(radio, (byte) read); // Send data
                                     }
+                                    inputStream.close();
                                     if (radio.getConfigsManager().getConfig().debug) {
                                         Scanner errorScanner = new Scanner(process.getErrorStream());
                                         while (errorScanner.hasNextLine()) {
