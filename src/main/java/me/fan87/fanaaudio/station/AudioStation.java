@@ -99,6 +99,7 @@ public class AudioStation {
         for (File file : files) {
             radio.getLogger().info(String.format("[%s]  Added %s to Track List", namespace, file.getName()));
             tracks.add(file);
+            splitAudio(radio, file);
         }
         return true;
     }
@@ -136,7 +137,7 @@ public class AudioStation {
             });
             return files;
         }
-        ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-y", "-f", "segment", "-segment_time", "300", "-c", "copy", "cache/" + this.namespace + "/" + track.getName() + "/%03d_out." + track.getName().split("\\.")[track.getName().split("\\.").length-1]); // Convert Format to streamable.aac (Using FFmpeg)
+        ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "-f", "segment", "-segment_time", "300", "2", "-y", "-acodec", "aac", "-sample_rate", "44100", "-map", "0:a", "-map_metadata", "-1", "-write_xing", "0", "-id3v2_version", "0", "-b:a", "256000", "cache/" + this.namespace + "/" + track.getName() + "/%03d_out.aac");
         try {
             builder.start().waitFor();
 
