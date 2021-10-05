@@ -140,6 +140,8 @@ public class AudioStation {
                 }
             });
             if (promise) promises -= 1;
+            radio.getLogger().info("Prepared Track: " + track.getName());
+
             return files;
         }
         ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-f", "segment", "-segment_time", "300", "-y", "-acodec", "aac", "-sample_rate", "44100", "-map", "0:a", "-write_xing", "0", "-b:a", "256000", "cache/" + this.namespace + "/" + track.getName() + "/%03d_out.aac");
@@ -166,6 +168,7 @@ public class AudioStation {
                     return i;
                 }
             });
+            radio.getLogger().info("Prepared Track: " + track.getName());
             if (promise) promises -= 1;
             return files;
         } catch (Exception e) {
