@@ -37,10 +37,10 @@ public class StationsManager {
                     "<body>\n" +
                     "<h1>%s</h1>\n", radio.getConfigsManager().getConfig().stationName) +
                     "<h2>Station not found! Here's all available stations:</h2>\n" +
-                    "<p>Note: M3U requires 3rd party software. If you want to play it in your browser, use MP3</p>\n");
+                    "<p>Note: M3U requires 3rd party software. If you want to play it in your browser, use AAC</p>\n");
             for (AudioStation station : radio.getStationsManager().stations) {
-                builder.append(String.format("\n<li><a href=\"%s\">%s</a>  (<a href=\"%s\">M3U</a> | <a href=\"%s\">MP3</a>) </li>",
-                        "/" + station.namespace + "/radio.mp3", station.name, "/" + station.namespace + "/radio.m3u", "/" + station.namespace + "/radio.mp3"));
+                builder.append(String.format("\n<li><a href=\"%s\">%s</a>  (<a href=\"%s\">M3U</a> | <a href=\"%s\">AAC</a>) </li>",
+                        "/" + station.namespace + "/radio.aac", station.name, "/" + station.namespace + "/radio.m3u", "/" + station.namespace + "/radio.aac"));
             }
             builder.append("</body>\n");
             builder.append("</html>\n");

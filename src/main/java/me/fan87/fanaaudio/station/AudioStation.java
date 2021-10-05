@@ -123,7 +123,7 @@ public class AudioStation {
                     streamingThread = new Thread(() -> { // Streaming Thread. This will send a song.
                         try {
                             radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
-                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-y", "-f", "mp3", "-acodec", "libmp3lame", "-sample_rate", "44100", "-map", "0:a", "-map_metadata", "-1", "-write_xing", "0", "-id3v2_version", "0", "-b:a", "256000", "pipe:"); // Convert Format to streamable MP3 (Using FFmpeg)
+                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-y", "-f", "adts", "-acodec", "aac", "-sample_rate", "44100", "-map", "0:a", "-map_metadata", "-1", "-write_xing", "0", "-id3v2_version", "0", "-b:a", "256000", "pipe:"); // Convert Format to streamable.aac (Using FFmpeg)
                             process = builder.start();
                             InputStream inputStream = process.getInputStream();
                             int read;
@@ -189,10 +189,10 @@ public class AudioStation {
      */
     public void registerHandlers(FANARadio radio) {
         radio.getServer().createContext("/" + this.namespace + "/", (exchange) -> {
-            if (exchange.getRequestURI().getPath().endsWith(".mp3")) {
+            if (exchange.getRequestURI().getPath().endsWith(".aac")) {
                 new Thread(() -> {
                     try {
-                        exchange.getResponseHeaders().add("Content-Type", "audio/mp3");
+                        exchange.getResponseHeaders().add("Content-Type", "audio/aac");
                         exchange.sendResponseHeaders(200, 0);
                         radio.getLogger().info(String.format("[%s]  %s has joined the stream", this.namespace, exchange.getRemoteAddress().getHostName() + ":" + exchange.getRemoteAddress().getPort()));
                         receivers.put(exchange.getResponseBody(), exchange.getRemoteAddress());
@@ -206,7 +206,7 @@ public class AudioStation {
                 String text =
                         "#EXTM3U\n" +
                         "#EXTINF:0, " + owner + " - " + name + "\n" +
-                        "radio.mp3";
+                        "radio.aac";
                 exchange.getResponseHeaders().add("Content-Type", "audio/mpegurl");
                 exchange.sendResponseHeaders(200, text.getBytes(StandardCharsets.UTF_8).length);
                 exchange.getResponseBody().write(text.getBytes(StandardCharsets.UTF_8));
@@ -225,10 +225,10 @@ public class AudioStation {
                     "<body>\n" +
                     "<h1>%s</h1>\n", radio.getConfigsManager().getConfig().stationName) +
                     "<h2>Station not found! Here's all available stations:</h2>\n" +
-                    "<p>Note: M3U requires 3rd party software. If you want to play it in your browser, use MP3</p>\n");
+                    "<p>Note: M3U requires 3rd party software. If you want to play it in your browser, use AAC</p>\n");
             for (AudioStation station : radio.getStationsManager().stations) {
-                builder.append(String.format("\n<li><a href=\"%s\">%s</a>  (<a href=\"%s\">M3U</a> | <a href=\"%s\">MP3</a>) </li>",
-                        "/" + station.namespace + "/radio.mp3", station.name, "/" + station.namespace + "/radio.m3u", "/" + station.namespace + "/radio.mp3"));
+                builder.append(String.format("\n<li><a href=\"%s\">%s</a>  (<a href=\"%s\">M3U</a> | <a href=\"%s\">AAC</a>) </li>",
+                        "/" + station.namespace + "/radio.aac", station.name, "/" + station.namespace + "/radio.m3u", "/" + station.namespace + "/radio.aac"));
             }
             builder.append("</body>\n");
             builder.append("</html>\n");
