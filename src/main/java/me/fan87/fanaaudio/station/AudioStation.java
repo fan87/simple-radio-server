@@ -57,6 +57,8 @@ public class AudioStation {
         }
     }
 
+    private transient int promises = 0;
+
     /**
      * Load all tracks
      * @param radio Radio instance (For logging)
@@ -100,7 +102,13 @@ public class AudioStation {
         for (File file : files) {
             radio.getLogger().info(String.format("[%s]  Added %s to Track List", namespace, file.getName()));
             tracks.add(file);
-            splitAudio(radio, file);
+            promises += 1;
+            new Thread(() -> {
+                splitAudio(radio, file, true);
+            }).start();
+        }
+        while (promises != 0) {
+
         }
         disableWatchdog = false;
         return true;
@@ -111,7 +119,7 @@ public class AudioStation {
      * @param radio Radio instance
      * @param track Track
      */
-    private List<File> splitAudio(FANARadio radio, File track) {
+    private List<File> splitAudio(FANARadio radio, File track, boolean promise) {
         radio.getLogger().info("Preparing Track: " + track.getName() + "! If it's stuck, it means the track wasn't ready. It will take a while, but it won't take too long.");
         File cacheFolder = new File("cache/" + this.namespace + "/" + track.getName() + "/");
         if (!cacheFolder.exists()) {
@@ -137,6 +145,7 @@ public class AudioStation {
                     return i;
                 }
             });
+            if (promise) promises -= 1;
             return files;
         }
         ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-f", "segment", "-segment_time", "300", "-y", "-acodec", "aac", "-sample_rate", "44100", "-map", "0:a", "-write_xing", "0", "-b:a", "256000", "cache/" + this.namespace + "/" + track.getName() + "/%03d_out.aac");
@@ -163,6 +172,7 @@ public class AudioStation {
                     return i;
                 }
             });
+            if (promise) promises -= 1;
             return files;
         } catch (Exception e) {
             e.printStackTrace();
@@ -190,7 +200,7 @@ public class AudioStation {
                         streamingThread = new Thread(() -> { // Streaming Thread. This will send a song.
                             try {
                                 disableWatchdog = true;
-                                for (File file : splitAudio(radio, track)) {
+                                for (File file : splitAudio(radio, track, false)) {
                                     disableWatchdog = false;
                                     radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
                                     ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", file.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-y", "-f", "adts", "-acodec", "aac", "-sample_rate", "44100", "-map", "0:a", "-map_metadata", "-1", "-write_xing", "0", "-id3v2_version", "0", "-b:a", "256000", "pipe:"); // Convert Format to streamable.aac (Using FFmpeg)
@@ -253,7 +263,7 @@ public class AudioStation {
                     }
                 }
             }, "Watchdog Thread " + this.namespace).start();
-        }, this.namespace + " Main");
+        }, this.namespace + " Main").start();
 
 
     }
