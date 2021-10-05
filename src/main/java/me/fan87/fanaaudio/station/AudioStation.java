@@ -63,6 +63,7 @@ public class AudioStation {
      * @return If successful
      */
     private boolean indexTracks(FANARadio radio) {
+        disableWatchdog = true;
         File folder = new File("tracks/" + this.namespace);
         if (!folder.isDirectory() || !folder.exists()) {
             try {
@@ -101,6 +102,7 @@ public class AudioStation {
             tracks.add(file);
             splitAudio(radio, file);
         }
+        disableWatchdog = false;
         return true;
     }
 
