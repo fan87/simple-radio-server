@@ -129,34 +129,40 @@ public class AudioStation {
                             InputStream inputStream = process.getInputStream();
                             boolean shouldBreak = false;
                             boolean firstByteOfSyncWord = false; // To detect First Sync Word
-                            int frameSize = 0; // How large is a frame (Includes header)
-                            int byteIndex = 0; // For debugging
+                            int previousFrameLocation = 0;
+                            int byteIndex = 0;
+                            int frameSize = 0;  // How large is a frame (Includes header)
                             boolean firstFrame = true; // So it won't break if it's first header in the mp3 file
+                            int ruledFrames = 0;
 
                             while (!shouldBreak) {
                                 long startTime = System.currentTimeMillis();
-                                for (int i = 0; i < 1152; i++) { // Currently, 39 frames per second
-                                    byteIndex++;
-                                    System.out.println(byteIndex);
+                                for (int i = 0; i < 1; i++) { // 1152 samples per frame. Sending 1 frame
                                     int read = 0;
                                     while ((read = inputStream.read()) != -1) {
+                                        byteIndex++;
+
                                         this.lastSentTime = System.currentTimeMillis(); // For watchdog thread (Skip the song if it's stuck)
                                         sendData(radio, (byte) read); // Send data back if it's not header
                                         if (firstByteOfSyncWord) {
                                             firstByteOfSyncWord = false;
-                                            if (Long.toHexString(read).startsWith("F") || Long.toHexString(read).startsWith("f")) {
+                                            if ((byte) read == (byte) 0xfb) {
                                                 if (firstFrame) {
                                                     firstFrame = false;
                                                 } else {
+                                                    int frameLength = (byteIndex - previousFrameLocation);
+                                                    System.out.println(frameSize);
+                                                    if (frameSize != frameLength) {
+                                                        if (frameLength > frameSize) frameSize = frameLength; else continue;
+                                                    }
+                                                    previousFrameLocation = byteIndex;
                                                     break; // Go to next frame
                                                 }
                                             }
                                         }
                                         if ((byte) read == (byte) 0xff) {
-                                            System.out.println(read);
                                             firstByteOfSyncWord = true;
                                         }
-//                                        sendData(radio, (byte) read);
                                     }
                                     if (read == -1) {
                                         shouldBreak = true;
@@ -164,7 +170,7 @@ public class AudioStation {
                                     }
                                 }
                                 try {
-                                    Thread.sleep(1000 - (System.currentTimeMillis() - startTime)); // Send data second by second
+                                    Thread.sleep(25 - (System.currentTimeMillis() - startTime)); // Send data second by second
                                     // By doing start time, sending thousands of bytes will take some time to process
                                     // So it will be exact 1000 ms
                                     // Note: If your computer is too slow it will break entirely
