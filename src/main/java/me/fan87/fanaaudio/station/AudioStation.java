@@ -45,13 +45,27 @@ public class AudioStation {
     }
 
     /**
-     * Start playing + processing tracks + sending radio data
-     * @param radio Instance of FANARadio
+     * Send byte to all receivers
+     * @param radio Radio instance (For disconnect logging)
+     * @param bytes Bytes to send (Require bytes array. You can cast int to byte)
      */
-    public void startServicing(FANARadio radio) {
-        if (this.namespace.equals("reload")) {
-//            radio.getLogger().warn("You are not allowed to use \"" + this.namespace + "\" as radio station namespace");
+    private void sendData(FANARadio radio, byte... bytes) {
+        for (OutputStream outputStream : new HashMap<>(receivers).keySet()) {
+            try {
+                outputStream.write(bytes);
+            } catch (Exception e) {
+                radio.getLogger().info(String.format("[%s]  Client %s has disconnected! ", namespace, receivers.get(outputStream).getHostName() + ":" + receivers.get(outputStream).getPort()));
+                receivers.remove(outputStream);
+            }
         }
+    }
+
+    /**
+     * Load all tracks
+     * @param radio Radio instance (For logging)
+     * @return If successful
+     */
+    private boolean indexTracks(FANARadio radio) {
         File folder = new File("tracks/" + this.namespace);
         if (!folder.isDirectory() || !folder.exists()) {
             try {
@@ -62,7 +76,6 @@ public class AudioStation {
 
         List<File> files = new ArrayList<>(Arrays.asList(folder.listFiles()));
         files.sort(new Comparator<File>() {
-            // Credit: https://stackoverflow.com/questions/16898029/how-to-sort-file-names-in-ascending-order
             @Override
             public int compare(File o1, File o2) {
                 int n1 = extractNumber(o1.getName());
@@ -84,66 +97,115 @@ public class AudioStation {
 
         if (files.size() == 0) {
             radio.getLogger().warn("Radio: " + namespace + " has no track. Ignoring");
-            return;
+            return false;
         }
         for (File file : files) {
             radio.getLogger().info(String.format("[%s]  Added %s to Track List", namespace, file.getName()));
             tracks.add(file);
         }
-        new Thread(() -> {
+        return true;
+    }
+
+    /**
+     * Start playing + processing tracks + sending radio data
+     * @param radio Instance of FANARadio
+     */
+    public void startServicing(FANARadio radio) {
+        if (!indexTracks(radio)) {
+            return;
+        }
+        new Thread(() -> { // Radio Handling Thread.  Note: There will only be one Radio Handling Tread
             while (true) {
                 if (radio.getConfigsManager().getConfig().shuffle) {
                     Collections.shuffle(tracks);
                 }
                 for (File track : tracks) {
-                    streamingThread = new Thread(() -> {
+                    streamingThread = new Thread(() -> { // Streaming Thread. This will send a song.
                         try {
                             radio.getLogger().info(String.format("[%s]  Started playing track: %s", this.namespace, track.getName()));
-                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-re", "-i", String.format("%s", track.getAbsolutePath()), "-y", "-f", "mp3", "-sample_rate", "44100", "-map", "0:a", "-b:a", "256k", "pipe:");
+                            ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-i", String.format("%s", track.getAbsolutePath()), "-y", "-f", "mp3", "-sample_rate", "44100", "-map", "0:a", "-b:a", "256000", "pipe:")
+                                    .redirectErrorStream(false); // Convert Format to streamable MP3 (Using FFmpeg)
                             process = builder.start();
                             InputStream inputStream = process.getInputStream();
-                            while (process.isAlive()) {
-                                int read = inputStream.read();
-                                this.lastSentTime = System.currentTimeMillis();
-                                if (read == -1) break;
-                                for (OutputStream outputStream : new HashMap<>(receivers).keySet()) {
-                                    try {
-                                        outputStream.write(read);
-                                        try {
-                                            outputStream.flush();
-                                        } catch (Exception e) {
-                                            radio.getLogger().info(String.format("[%s]  Client %s has disconnected! ", namespace, receivers.get(outputStream).getHostName() + ":" + receivers.get(outputStream).getPort()));
-                                            receivers.remove(outputStream);
+                            boolean shouldBreak = false;
+                            boolean firstByteOfSyncWord = false; // To detect First Sync Word
+                            int frameSize = 0; // How large is a frame (Includes header)
+                            int byteIndex = 0; // For debugging
+                            boolean firstFrame = true; // So it won't break if it's first header in the mp3 file
+
+                            while (!shouldBreak) {
+                                long startTime = System.currentTimeMillis();
+                                for (int i = 0; i < 44100 / 1152; i++) { // Currently, 39 frames per second
+                                    byteIndex++;
+                                    System.out.println(byteIndex);
+                                    int read = 0;
+                                    while ((read = inputStream.read()) != -1) {
+                                        this.lastSentTime = System.currentTimeMillis(); // For watchdog thread (Skip the song if it's stuck)
+                                        sendData(radio, (byte) read); // Send data back if it's not header
+                                        if (firstByteOfSyncWord) {
+                                            firstByteOfSyncWord = false;
+                                            if (Long.toHexString(read).startsWith("F") || Long.toHexString(read).startsWith("f")) {
+                                                if (firstFrame) {
+                                                    firstFrame = false;
+                                                } else {
+                                                    break; // Go to next frame
+                                                }
+                                            }
                                         }
-                                    } catch (Error e) {
-                                        radio.getLogger().info(String.format("[%s]  Client %s has disconnected! ", namespace, receivers.get(outputStream).getHostName() + ":" + receivers.get(outputStream).getPort()));
-                                        receivers.remove(outputStream);
+                                        if ((byte) read == (byte) 0xff) {
+                                            System.out.println(read);
+                                            firstByteOfSyncWord = true;
+                                        }
+//                                        sendData(radio, (byte) read);
+                                    }
+                                    if (read == -1) {
+                                        shouldBreak = true;
+                                        break;
                                     }
                                 }
+                                try {
+                                    System.out.println((System.currentTimeMillis() - startTime));
+                                    Thread.sleep(1000); // Send data second by second
+                                    // By doing start time, sending thousands of bytes will take some time to process
+                                    // So it will be exact 1000 ms
+                                    // Note: If your computer is too slow it will break entirely
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
                             }
-                            Scanner errorScanner = new Scanner(process.getErrorStream());
-                            while (errorScanner.hasNextLine()) {
-                                 System.out.println(errorScanner.nextLine());
+                            if (radio.getConfigsManager().getConfig().debug) {
+                                Scanner errorScanner = new Scanner(process.getErrorStream());
+                                while (errorScanner.hasNextLine()) {
+                                    System.out.println(errorScanner.nextLine()); // Send ffmpeg output to console for debugging purpose
+                                }
                             }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                     }, "Streaming Thread " + this.namespace);
-                    try {
+
+                    try {                     // Start song sending (Stream Thread) thread
                         streamingThread.start();
                         while (!streamingThread.isInterrupted() && streamingThread.isAlive()) {
 
                         }
                         radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
                         Scanner scanner = new Scanner(process.getErrorStream());
-                        while (scanner.hasNextLine()) {
-                            System.out.println(scanner.nextLine());
+                        if (radio.getConfigsManager().getConfig().debug) {
+                            Scanner errorScanner = new Scanner(process.getErrorStream());
+                            while (errorScanner.hasNextLine()) {
+                                System.out.println(errorScanner.nextLine()); // Send ffmpeg output to console for debugging purpose
+                            }
                         }
                     } catch (Exception e) {
                         radio.getLogger().warn(String.format("[%s]  Streaming Thread has been stopped! Song skipped!", namespace));
                         Scanner scanner = new Scanner(process.getErrorStream());
-                        while (scanner.hasNextLine()) {
-                            System.out.println(scanner.nextLine());
+                        if (radio.getConfigsManager().getConfig().debug) {
+                            e.printStackTrace();
+                            Scanner errorScanner = new Scanner(process.getErrorStream());
+                            while (errorScanner.hasNextLine()) {
+                                System.out.println(errorScanner.nextLine()); // Send ffmpeg output to console for debugging purpose
+                            }
                         }
                     }
                 }

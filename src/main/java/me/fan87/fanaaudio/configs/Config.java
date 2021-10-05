@@ -26,4 +26,7 @@ public class Config {
     @Expose
     public Boolean shuffle = true;
 
+    @Expose
+    public Boolean debug = false;
+
 }
