@@ -137,10 +137,10 @@ public class AudioStation {
             });
             return files;
         }
-        ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "-f", "segment", "-segment_time", "300", "2", "-y", "-acodec", "aac", "-sample_rate", "44100", "-map", "0:a", "-map_metadata", "-1", "-write_xing", "0", "-id3v2_version", "0", "-b:a", "256000", "cache/" + this.namespace + "/" + track.getName() + "/%03d_out.aac");
+        ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-f", "segment", "-segment_time", "300", "-y", "-acodec", "aac", "-sample_rate", "44100", "-map", "0:a", "-write_xing", "0", "-b:a", "256000", "cache/" + this.namespace + "/" + track.getName() + "/%03d_out.aac");
         try {
-            builder.start().waitFor();
-
+            Process start = builder.start();
+            start.waitFor();
             List<File> files = new ArrayList<>(Arrays.asList(cacheFolder.listFiles()));
             files.sort(new Comparator<File>() {
                 @Override
