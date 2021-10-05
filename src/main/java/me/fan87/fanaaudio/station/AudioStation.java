@@ -143,7 +143,7 @@ public class AudioStation {
             });
             return files;
         }
-        ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-y", "-f", "segment", "-segment_time", "300", "-acodec", "aac", "cache/" + this.namespace + "/" + track.getName() + "/%03d_out." + track.getName().split("\\.")[track.getName().split("\\.").length-1]); // Convert Format to streamable.aac (Using FFmpeg)
+        ProcessBuilder builder = new ProcessBuilder("ffmpeg", "-i", String.format("%s", track.getAbsolutePath()), "-reset_timestamps", "1", "-ac", "2", "-y", "-f", "segment", "-segment_time", "300", "-acodec", "aac", "cache/" + this.namespace + "/" + track.getName() + "/%03d_out." + track.getName().split("\\.")[track.getName().split("\\.").length-1]); // Convert Format to streamable.aac (Using FFmpeg)
         try {
             builder.start().waitFor();
 
